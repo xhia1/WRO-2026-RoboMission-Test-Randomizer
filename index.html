@@ -11,17 +11,13 @@
     header h1{ margin:0; font-size:18px; }
     header p{ margin:6px 0 0; color:#444; font-size:13px; }
     .wrap{ max-width:980px; margin:0 auto; padding:16px; }
-    .tabs{
-      display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px;
-    }
+    .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px; }
     .tab{
       padding:10px 12px; background:#fff; border:1px solid #ddd; border-radius:10px;
-      font-weight:700; cursor:pointer; user-select:none;
+      font-weight:800; cursor:pointer; user-select:none;
     }
     .tab[aria-selected="true"]{ border-color:#111; }
-    .grid{
-      display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px;
-    }
+    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
     .card{
       background:#fff; border:1px solid #ddd; border-radius:14px; padding:14px;
       box-shadow:0 2px 10px rgba(0,0,0,.05);
@@ -30,7 +26,7 @@
     .card p{ margin:0 0 10px; font-size:13px; color:#444; line-height:1.5; }
     .btn{
       display:inline-block; padding:10px 12px; border-radius:12px; border:1px solid #ccc;
-      background:#fff; text-decoration:none; color:#111; font-weight:800;
+      background:#fff; text-decoration:none; color:#111; font-weight:900;
     }
     .btn:hover{ background:#f2f2f2; }
     footer{ padding:16px; color:#666; font-size:12px; }
@@ -40,11 +36,11 @@
   <header>
     <div class="wrap">
       <h1>WRO Randomizers</h1>
-      <p>Competition Category / 競技カテゴリ</p>
+      <p>Static tools for practice / events (GitHub Pages / NAS).</p>
       <div class="tabs" role="tablist" aria-label="category tabs">
-        <div class="tab" role="tab" aria-selected="true" data-cat="senior">Senior / 高校</div>
-        <div class="tab" role="tab" aria-selected="false" data-cat="junior">Junior / 中学</div>
-        <div class="tab" role="tab" aria-selected="false" data-cat="elem">Elementary / 小学</div>
+        <div class="tab" role="tab" aria-selected="true" data-cat="senior">Senior</div>
+        <div class="tab" role="tab" aria-selected="false" data-cat="junior">Junior</div>
+        <div class="tab" role="tab" aria-selected="false" data-cat="elem">Elementary</div>
       </div>
     </div>
   </header>
@@ -54,7 +50,7 @@
   </main>
 
   <footer class="wrap">
-    <div>Made for local practice / events. Static site (GitHub Pages / NAS ok).</div>
+    <div>Tip: Use “Seed = R1 / R2 …” for reproducible rounds.</div>
   </footer>
 
 <script>
@@ -62,15 +58,15 @@
     senior: [
       {
         title: "RoboMission 2026 Senior — Mosaic Paper Randomizer",
-        desc: "34mm squares, 16mm gaps, overall 183×134mm. 4 colors × 6 each.",
+        desc: "6×4, 4 colors×6 each. Size switch: 190×150mm (DE) / 183×134mm (custom).",
         href: "./mosaic-2026-senior.html"
       },
     ],
     junior: [
-      { title:"(placeholder) RoboMission 2026 Junior", desc:"Add your tool later.", href:"#"}
+      { title:"(placeholder) RoboMission 2026 Junior", desc:"Add later.", href:"#"}
     ],
     elem: [
-      { title:"(placeholder) RoboMission 2026 Elementary", desc:"Add your tool later.", href:"#"}
+      { title:"(placeholder) RoboMission 2026 Elementary", desc:"Add later.", href:"#"}
     ],
   };
 
@@ -83,7 +79,7 @@
       div.innerHTML = `
         <h2>${it.title}</h2>
         <p>${it.desc}</p>
-        <a class="btn" href="${it.href}">Open / 開く</a>
+        <a class="btn" href="${it.href}">Open</a>
       `;
       grid.appendChild(div);
     }
