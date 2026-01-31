@@ -8,51 +8,47 @@
     :root{
       --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
 
-      /* --- 物理寸法（印刷基準） --- */
+      /* 固定グリッド寸法（あなた指定） */
       --cell: 34mm;
       --gap: 16mm;
-
-      /* --- 全体サイズ（あなた指定） --- */
-      --paper-w: 183mm;
-      --paper-h: 134mm;
     }
     body{ margin:0; font-family:var(--font); background:#fafafa; color:#111; }
-    .wrap{ max-width:980px; margin:0 auto; padding:16px; }
-    header{
-      background:#fff; border-bottom:1px solid #e5e5e5;
-    }
-    header .wrap{ display:flex; flex-wrap:wrap; gap:10px 14px; align-items:center; }
+    header{ background:#fff; border-bottom:1px solid #e5e5e5; }
+    .wrap{ max-width:1100px; margin:0 auto; padding:16px; }
+    header .wrap{ display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center; }
+
     h1{ margin:0; font-size:16px; }
-    .btn{
+
+    .btn, select, input{
       padding:10px 12px; border-radius:12px; border:1px solid #ccc;
-      background:#fff; font-weight:800; cursor:pointer;
+      background:#fff; font-weight:900;
     }
+    .btn{ cursor:pointer; }
     .btn:hover{ background:#f2f2f2; }
-    input{
-      padding:9px 10px; border-radius:12px; border:1px solid #ccc; background:#fff;
-      font-weight:700;
-    }
+    input{ font-weight:800; }
+
     .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
 
-    /* 印刷対象 */
+    /* 印刷対象：サイズはJSでstyle.width/heightをセット */
     .paper{
-      width: var(--paper-w);
-      height: var(--paper-h);
       background:#fff;
-      border:1px solid #000; /* 外形確認用（不要なら消してOK） */
       box-sizing:border-box;
-      padding: 0; /* ぴったり */
-      margin-top: 14px;
+      border: 2px solid #000; /* “黒枠込み”運用のため */
       position: relative;
+      margin-top: 14px;
+      overflow: hidden;
     }
+
+    /* 上向きマーク */
     .arrow{
       position:absolute; top:6mm; left:6mm;
       font-weight:900; font-size:12px;
       background:#fff; padding:2px 6px; border:1px solid #000; border-radius:8px;
     }
+
+    /* 6×4 を中央に配置 */
     .grid{
       position:absolute;
-      /* 6×4 を紙の中央に置く */
       left: 50%; top: 50%;
       transform: translate(-50%,-50%);
       display:grid;
@@ -64,32 +60,44 @@
     .cell{
       width: var(--cell);
       height: var(--cell);
-      border:1px solid #000;
+      border: 1px solid #000;
       box-sizing:border-box;
     }
 
     .note{
-      margin-top:10px; font-size:12px; color:#333; line-height:1.55;
+      margin-top:10px; font-size:12px; color:#333; line-height:1.6;
+    }
+    .tiny{
+      font-size:12px; color:#444; font-weight:700;
     }
 
     @media print{
       body{ background:#fff; }
       header, .note { display:none; }
-      .wrap{ padding:0; }
-      .paper{ margin:0; border:0; } /* 余白・枠なしで刷りたい場合 */
+      .wrap{ padding:0; max-width:none; }
+      .paper{ margin:0; }
     }
   </style>
 </head>
 <body>
 <header>
   <div class="wrap">
-    <h1>WRO 2026 Senior — Mosaic Paper Randomizer</h1>
+    <h1>RoboMission 2026 Senior — Mosaic Paper Randomizer</h1>
     <div class="bar">
-      <input id="seed" type="text" placeholder="Seed (例: R1)" />
-      <button class="btn" id="gen">All Random</button>
-      <button class="btn" id="cap">Save Capture (PNG)</button>
+      <select id="size" aria-label="paper size">
+        <option value="190x150">190×150mm (DE / black border included)</option>
+        <option value="183x134">183×134mm (custom)</option>
+      </select>
+
+      <input id="seed" type="text" placeholder="Seed (例: R1)" aria-label="seed" />
+
+      <button class="btn" id="gen">neue Anordnung</button>
+      <button class="btn" id="cap">Download PNG</button>
       <button class="btn" id="print">Print</button>
+      <button class="btn" id="copylink">Copy Link</button>
       <button class="btn" onclick="location.href='./index.html'">Back</button>
+
+      <span class="tiny" id="status"></span>
     </div>
   </div>
 </header>
@@ -101,14 +109,15 @@
   </div>
 
   <div class="note">
-    ・印刷は「拡大縮小なし（100%）」推奨。まず定規で 34mm を確認してください。<br>
-    ・24マスは 4色×各6個で均等。Seedを入れると同じ配置を再現できます。<br>
-    ・この紙をモザイクフレームの下に置いてランダム化する運用は公式ルールの想定です。:contentReference[oaicite:4]{index=4}
+    ・印刷は「拡大縮小なし（100%）」推奨。まず定規で 34mm（色マス）を確認してください。<br>
+    ・24マスは 4色×各6個で均等。Seedを入れると同じ配置を再現できます。URL共有もできます。<br>
+    ・紙でモザイク配置をランダム化する運用は公式ルールの想定です。:contentReference[oaicite:1]{index=1}
   </div>
 </div>
 
 <script>
-  const COLORS :contentReference[oaicite:5]{index=5}x:"#ffd400" }, // yellow
+  const COLORS = [
+    { key:"Y", hex:"#ffd400" }, // yellow
     { key:"B", hex:"#2f6bff" }, // blue
     { key:"G", hex:"#21b35b" }, // green
     { key:"W", hex:"#ffffff" }, // white
@@ -150,8 +159,7 @@
   }
 
   function generate(seedStr){
-    const total = 24;
-    const each = 6;
+    const each = 6; // 24/4
     const bag = [];
     for(const c of COLORS){
       for(let i=0;i<each;i++) bag.push(c);
@@ -171,16 +179,63 @@
     });
   }
 
-  // Save Capture: SVG経由でPNG化（外部ライブラリ不要）
-  async function savePng(){
-    const paper = document.getElementById("paper");
-    const wmm = 183, hmm = 134;
+  function parseSize(v){
+    const [wmm,hmm] = v.split("x").map(Number);
+    return { wmm, hmm };
+  }
 
-    // 96dpi換算: 1in=25.4mm → px = mm * 96 / 25.4
+  function applyPaperSize(){
+    const { wmm, hmm } = parseSize(document.getElementById("size").value);
+    const paper = document.getElementById("paper");
+    paper.style.width  = `${wmm}mm`;
+    paper.style.height = `${hmm}mm`;
+    return { wmm, hmm };
+  }
+
+  // URL sync: ?seed=R1&size=190x150
+  function syncToUrl(){
+    const seed = document.getElementById("seed").value.trim();
+    const size = document.getElementById("size").value;
+    const url = new URL(location.href);
+    if(seed) url.searchParams.set("seed", seed);
+    else url.searchParams.delete("seed");
+    url.searchParams.set("size", size);
+    history.replaceState(null, "", url.toString());
+  }
+
+  function loadFromUrl(){
+    const url = new URL(location.href);
+    const size = url.searchParams.get("size");
+    const seed = url.searchParams.get("seed");
+    if(size === "190x150" || size === "183x134"){
+      document.getElementById("size").value = size;
+    }
+    if(seed){
+      document.getElementById("seed").value = seed;
+    }
+  }
+
+  function setStatus(text){
+    document.getElementById("status").textContent = text;
+  }
+
+  function doGen(){
+    const seed = document.getElementById("seed").value.trim();
+    const { wmm, hmm } = applyPaperSize();
+    render(generate(seed));
+    syncToUrl();
+    setStatus(`size: ${wmm}×${hmm}mm / seed: ${seed || "random"}`);
+  }
+
+  // Download PNG: SVG foreignObject方式（外部ライブラリなし）
+  async function savePng(){
+    const { wmm, hmm } = applyPaperSize();
+    const paper = document.getElementById("paper");
+
+    // 96dpi換算（一般的なCSS px基準）
     const pxW = Math.round(wmm * 96 / 25.4);
     const pxH = Math.round(hmm * 96 / 25.4);
 
-    // paperをSVG foreignObjectでラップ（ほぼのブラウザで動作）
     const html = new XMLSerializer().serializeToString(paper);
     const svg =
 `<svg xmlns="http://www.w3.org/2000/svg" width="${pxW}" height="${pxH}">
@@ -200,30 +255,41 @@
       ctx.fillStyle = "#fff";
       ctx.fillRect(0,0,pxW,pxH);
       ctx.drawImage(img,0,0);
-
       URL.revokeObjectURL(url);
+
       const a = document.createElement("a");
       const seed = (document.getElementById("seed").value.trim() || "random").replace(/[^\w\-]+/g,"_");
-      a.download = `mosaic_2026_senior_${seed}_${wmm}x${hmm}mm.png`;
+      const size = document.getElementById("size").value;
+      a.download = `mosaic_2026_senior_${seed}_${size}mm.png`;
       a.href = cv.toDataURL("image/png");
       a.click();
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
-      alert("キャプチャに失敗しました。別ブラウザ（Chrome/Edge）で試してください。");
+      alert("PNG生成に失敗しました。Chrome/Edgeで試してください。");
     };
     img.src = url;
   }
 
-  function doGen(){
-    const seed = document.getElementById("seed").value.trim();
-    render(generate(seed));
+  async function copyLink(){
+    try{
+      syncToUrl();
+      await navigator.clipboard.writeText(location.href);
+      alert("リンクをコピーしました");
+    }catch{
+      alert("コピーできませんでした（ブラウザ権限を確認）");
+    }
   }
 
+  // wiring
   document.getElementById("gen").addEventListener("click", doGen);
   document.getElementById("cap").addEventListener("click", savePng);
   document.getElementById("print").addEventListener("click", () => window.print());
+  document.getElementById("copylink").addEventListener("click", copyLink);
+  document.getElementById("size").addEventListener("change", doGen);
 
+  // init
+  loadFromUrl();
   doGen();
 </script>
 </body>
