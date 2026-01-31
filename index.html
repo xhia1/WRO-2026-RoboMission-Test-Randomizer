@@ -5,95 +5,189 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>WRO Randomizers</title>
   <style>
-    :root{ --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif; }
-    body{ margin:0; font-family:var(--font); background:#fafafa; color:#111; }
-    header{ padding:18px 16px; background:#fff; border-bottom:1px solid #e5e5e5; }
-    header h1{ margin:0; font-size:18px; }
-    header p{ margin:6px 0 0; color:#444; font-size:13px; }
-    .wrap{ max-width:980px; margin:0 auto; padding:16px; }
-    .tabs{ display:flex; flex-wrap:wrap; gap:8px; margin:12px 0 16px; }
+    :root{
+      --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    }
+    body{
+      margin:0;
+      font-family:var(--font);
+      background:#fafafa;
+      color:#111;
+    }
+    header{
+      padding:18px 16px;
+      background:#fff;
+      border-bottom:1px solid #e5e5e5;
+    }
+    header h1{
+      margin:0;
+      font-size:20px;
+    }
+    header p{
+      margin:6px 0 0;
+      color:#444;
+      font-size:13px;
+      line-height:1.6;
+    }
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:16px;
+    }
+
+    /* tabs */
+    .tabs{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin:14px 0 18px;
+    }
     .tab{
-      padding:10px 12px; background:#fff; border:1px solid #ddd; border-radius:10px;
-      font-weight:800; cursor:pointer; user-select:none;
+      padding:10px 14px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:999px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
     }
-    .tab[aria-selected="true"]{ border-color:#111; }
-    .grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+    .tab[aria-selected="true"]{
+      border-color:#111;
+    }
+
+    /* cards */
+    .grid{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+      gap:14px;
+    }
     .card{
-      background:#fff; border:1px solid #ddd; border-radius:14px; padding:14px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius:16px;
+      padding:16px;
       box-shadow:0 2px 10px rgba(0,0,0,.05);
+      display:flex;
+      flex-direction:column;
+      gap:10px;
     }
-    .card h2{ margin:0 0 6px; font-size:16px; }
-    .card p{ margin:0 0 10px; font-size:13px; color:#444; line-height:1.5; }
+    .card h2{
+      margin:0;
+      font-size:16px;
+    }
+    .card p{
+      margin:0;
+      font-size:13px;
+      color:#444;
+      line-height:1.6;
+      flex:1;
+    }
     .btn{
-      display:inline-block; padding:10px 12px; border-radius:12px; border:1px solid #ccc;
-      background:#fff; text-decoration:none; color:#111; font-weight:900;
+      align-self:flex-start;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid #ccc;
+      background:#fff;
+      text-decoration:none;
+      color:#111;
+      font-weight:900;
     }
-    .btn:hover{ background:#f2f2f2; }
-    footer{ padding:16px; color:#666; font-size:12px; }
+    .btn:hover{
+      background:#f2f2f2;
+    }
+
+    footer{
+      padding:18px 16px;
+      font-size:12px;
+      color:#666;
+    }
   </style>
 </head>
 <body>
-  <header>
-    <div class="wrap">
-      <h1>WRO Randomizers</h1>
-      <p>Static tools for practice / events (GitHub Pages / NAS). Seed & size can be shared via URL.</p>
-      <div class="tabs" role="tablist" aria-label="category tabs">
-        <div class="tab" role="tab" aria-selected="true" data-cat="senior">Senior</div>
-        <div class="tab" role="tab" aria-selected="false" data-cat="junior">Junior</div>
-        <div class="tab" role="tab" aria-selected="false" data-cat="elem">Elementary</div>
-      </div>
+
+<header>
+  <div class="wrap">
+    <h1>WRO Randomizers</h1>
+    <p>
+      WRO RoboMission 用のランダマイザーツール集。<br>
+      GitHub Pages 上で動作し、Seed 共有・印刷（SVG / PDF）に対応しています。
+    </p>
+
+    <div class="tabs" role="tablist">
+      <div class="tab" role="tab" aria-selected="true" data-cat="senior">Senior</div>
+      <div class="tab" role="tab" aria-selected="false" data-cat="junior">Junior</div>
+      <div class="tab" role="tab" aria-selected="false" data-cat="elem">Elementary</div>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="wrap">
-    <div id="grid" class="grid"></div>
-  </main>
+<main class="wrap">
+  <div id="grid" class="grid"></div>
+</main>
 
-  <footer class="wrap">
-    <div>Tip: Use “Seed = R1 / R2 …” to reproduce the same pattern. Print at 100% (no scaling).</div>
-  </footer>
+<footer class="wrap">
+  <div>
+    Tip: Seed を指定すると同じ配置を再現できます。<br>
+    印刷用途は SVG / PDF を推奨（100%スケール）。
+  </div>
+</footer>
 
 <script>
   const items = {
     senior: [
       {
-        title: "RoboMission 2026 Senior — Mosaic Paper Randomizer (3×4)",
-        desc: "12 cells (4 colors × 3 each). Size switch: 190×150mm (DE) / 184×134mm (true 34mm+16mm) / 183×134mm (alt).",
+        title: "RoboMission 2026 Senior — Mosaic Paper Randomizer",
+        desc:
+          "3×4（12マス）のモザイクパターンをランダム生成。各色0〜6個（合計12）に対応。SVG / PDF ダウンロード、10cmスケールバー、日本語/英語UI切替対応。",
         href: "./mosaic-2026-senior.html"
-      },
+      }
     ],
+
     junior: [
-      { title:"(placeholder) RoboMission 2026 Junior", desc:"Add later.", href:"#"}
+      {
+        title: "RoboMission 2026 Junior — Artefacts Randomizer",
+        desc:
+          "5色のアーティファクトから4色を選択し、4つの黒マスへランダム配置。コース画像上に色付き四角を重ねて表示。Seed共有・位置編集対応。",
+        href: "./junior-2026-artefacts.html"
+      }
     ],
+
     elem: [
-      { title:"(placeholder) RoboMission 2026 Elementary", desc:"Add later.", href:"#"}
-    ],
+      {
+        title: "(Coming soon) RoboMission 2026 Elementary",
+        desc:
+          "Elementary 向けランダマイザーは今後追加予定。",
+        href: "#"
+      }
+    ]
   };
 
   function render(cat){
     const grid = document.getElementById("grid");
     grid.innerHTML = "";
-    for(const it of items[cat]){
-      const div = document.createElement("div");
-      div.className = "card";
-      div.innerHTML = `
+    items[cat].forEach(it=>{
+      const card = document.createElement("div");
+      card.className = "card";
+      card.innerHTML = `
         <h2>${it.title}</h2>
         <p>${it.desc}</p>
         <a class="btn" href="${it.href}">Open</a>
       `;
-      grid.appendChild(div);
-    }
+      grid.appendChild(card);
+    });
   }
 
-  document.querySelectorAll(".tab").forEach(t => {
-    t.addEventListener("click", () => {
-      document.querySelectorAll(".tab").forEach(x => x.setAttribute("aria-selected","false"));
-      t.setAttribute("aria-selected","true");
-      render(t.dataset.cat);
+  document.querySelectorAll(".tab").forEach(tab=>{
+    tab.addEventListener("click", ()=>{
+      document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected","false"));
+      tab.setAttribute("aria-selected","true");
+      render(tab.dataset.cat);
     });
   });
 
+  // 初期表示
   render("senior");
 </script>
+
 </body>
 </html>
