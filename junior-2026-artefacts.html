@@ -24,9 +24,7 @@
     .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
     .tiny{ font-size:12px; color:#444; font-weight:700; }
 
-    label.switch{
-      display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none;
-    }
+    label.switch{ display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none; }
     label.switch input{ width:auto; padding:0; border:none; }
 
     /* Stage */
@@ -38,17 +36,21 @@
       border-radius: 14px;
       overflow:hidden;
     }
+
+    /* ★重要：背景画像（2048×1000）に合わせた縦横比 */
     .stageInner{
       position: relative;
       width: 100%;
-      aspect-ratio: 4 / 3; /* 背景画像に合わせて必要なら後で調整可 */
-      background:#eee;
+      aspect-ratio: 2048 / 1000; /* ← ここが修正点 */
+      background:#fff;
     }
+
     .bg{
       position:absolute; inset:0;
       width:100%; height:100%;
-      object-fit: contain;
+      object-fit: contain; /* 見切れない（推奨） */
       background:#fff;
+      display:block;
     }
 
     /* Overlay squares */
@@ -68,7 +70,7 @@
       cursor: grab;
     }
     .marker .lbl{
-      background: rgba(255,255,255,.75);
+      background: rgba(255,255,255,.78);
       padding: 2px 6px;
       border-radius: 999px;
       font-size: 12px;
@@ -95,6 +97,9 @@
     }
     .dot{ width:14px; height:14px; border-radius:4px; border:1px solid rgba(0,0,0,.15); }
 
+    /* 背景が見づらい時に便利（任意） */
+    .dim .bg{ filter: brightness(0.92) contrast(1.05); }
+
     @media (max-width:520px){
       .marker{ width:40px; height:40px; }
       .marker .lbl{ font-size:11px; }
@@ -116,6 +121,12 @@
       <button class="btn" id="gen">New arrangement</button>
       <button class="btn" id="copylink">Copy Link</button>
       <button class="btn" id="toggleEdit">Edit Positions</button>
+
+      <label class="switch" title="Dim background for readability">
+        <input id="dim" type="checkbox" />
+        <span id="dimLabel">背景を少し暗く</span>
+      </label>
+
       <button class="btn" onclick="location.href='./index.html'">Back</button>
 
       <span class="tiny" id="status"></span>
@@ -126,8 +137,8 @@
 <div class="wrap">
   <div class="stage">
     <div class="stageInner" id="stage">
-      <!-- 背景画像（repoに assets/junior-mat.png を置く） -->
-      <img class="bg" id="bg" src="./assets/junior-mat.png" alt="WRO 2026 Junior game mat" />
+      <!-- ★画像を assets/junior-mat.jpg に -->
+      <img class="bg" id="bg" src="./assets/junior-mat.jpg" alt="WRO 2026 Junior game mat" />
 
       <!-- 4つの配置マーカー（= 黒い4マス） -->
       <div class="marker" id="m0"><span class="lbl">A</span></div>
@@ -160,7 +171,8 @@
         "5色（青/赤/緑/黒/黄）のアーティファクトから各ラウンド4色を使用し、4つの黒マスへランダム配置。未使用の色も表示します。",
       status: (seed, unusedKey)=>`seed: ${seed || "random"} / unused: ${unusedKey}`,
       used: "使用（4つ）",
-      unused: "未使用（1つ）"
+      unused: "未使用（1つ）",
+      dim: "背景を少し暗く"
     },
     en: {
       title: "RoboMission 2026 Junior — Artefacts Randomizer",
@@ -173,7 +185,8 @@
         "Each round uses 4 colours out of 5 artefacts (blue/red/green/black/yellow) and assigns them to the four black squares. One colour is unused.",
       status: (seed, unusedKey)=>`seed: ${seed || "random"} / unused: ${unusedKey}`,
       used: "Used (4)",
-      unused: "Unused (1)"
+      unused: "Unused (1)",
+      dim: "Dim background"
     }
   };
 
@@ -185,7 +198,7 @@
     document.getElementById("gen").textContent = t.gen;
     document.getElementById("copylink").textContent = t.copy;
     document.getElementById("note").textContent = t.note;
-    // toggleEdit label is set dynamically
+    document.getElementById("dimLabel").textContent = t.dim;
   }
 
   // ---- seeded RNG ----
@@ -247,13 +260,13 @@
   }
 
   // ---- marker positions (percent-based, editable) ----
-  // 初期値（だいたい）：下中央の4マス付近。必要なら Edit Positions でドラッグ調整してOK。
-  // 値は stage（表示領域）に対する %。
+  // 初期値：画像全体が見える（contain）前提で、下側の4マス付近に“だいたい”合わせてある
+  // ピッタリ合わせたい場合は Edit Positions でドラッグしてURL共有
   const DEFAULT_POS = [
-    { x: 44.0, y: 85.0 }, // A
-    { x: 51.0, y: 85.0 }, // B
-    { x: 58.0, y: 85.0 }, // C
-    { x: 65.0, y: 85.0 }  // D
+    { x: 47.0, y: 84.5 }, // A
+    { x: 53.0, y: 84.5 }, // B
+    { x: 59.0, y: 84.5 }, // C
+    { x: 65.0, y: 84.5 }  // D
   ];
 
   function loadPos(){
@@ -273,13 +286,16 @@
     history.replaceState(null, "", url.toString());
   }
 
-  // Keep seed/lang in URL too
   function syncBasicsToUrl(){
     const url = new URL(location.href);
     const seed = document.getElementById("seed").value.trim();
     const lang = document.getElementById("lang").value;
+    const dim  = document.getElementById("dim").checked;
+
     if(seed) url.searchParams.set("seed", seed); else url.searchParams.delete("seed");
     url.searchParams.set("lang", lang);
+    if(dim) url.searchParams.set("dim","1"); else url.searchParams.delete("dim");
+
     history.replaceState(null, "", url.toString());
   }
 
@@ -287,8 +303,11 @@
     const url = new URL(location.href);
     const seed = url.searchParams.get("seed");
     const lang = url.searchParams.get("lang");
+    const dim  = url.searchParams.get("dim");
+
     if(seed) document.getElementById("seed").value = seed;
     if(lang==="ja"||lang==="en") document.getElementById("lang").value = lang;
+    document.getElementById("dim").checked = (dim==="1");
   }
 
   let positions = loadPos() || DEFAULT_POS.map(p=>({x:p.x,y:p.y}));
@@ -304,7 +323,6 @@
     }
   }
 
-  // ---- render overlay ----
   function setStatus(seed, unusedKey){
     const lang = document.getElementById("lang").value;
     const t = I18N[lang] || I18N.ja;
@@ -320,7 +338,6 @@
     legend.innerHTML = "";
     un.innerHTML = "";
 
-    // Used list
     const head = document.createElement("div");
     head.className = "chip";
     head.textContent = t.used;
@@ -333,7 +350,6 @@
       legend.appendChild(chip);
     });
 
-    // Unused
     const head2 = document.createElement("div");
     head2.className = "chip";
     head2.textContent = t.unused;
@@ -346,11 +362,9 @@
   }
 
   function applyColours(used){
-    // A-D in order
     for(let i=0;i<4;i++){
       const el = document.getElementById("m"+i);
       el.style.background = used[i].hex;
-      // black tile: make label white
       el.style.color = (used[i].key==="BLACK") ? "#fff" : "#111";
     }
   }
@@ -416,34 +430,46 @@
     placeMarkers();
   }
 
+  function applyDim(){
+    document.getElementById("stage").classList.toggle("dim", document.getElementById("dim").checked);
+    syncBasicsToUrl();
+  }
+
   // ---- init ----
   applyFromUrl();
   applyLang(document.getElementById("lang").value);
-  placeMarkers();
 
-  // enable drag for all markers
+  // initial edit label
+  document.getElementById("toggleEdit").textContent = I18N[document.getElementById("lang").value].editOff;
+
+  placeMarkers();
+  applyDim();
+
   for(let i=0;i<4;i++){
     enableDrag(document.getElementById("m"+i), i);
   }
 
-  // wiring
   document.getElementById("gen").addEventListener("click", doGen);
   document.getElementById("copylink").addEventListener("click", copyLink);
   document.getElementById("toggleEdit").addEventListener("click", toggleEdit);
 
   document.getElementById("lang").addEventListener("change", ()=>{
     applyLang(document.getElementById("lang").value);
-    // keep edit button label consistent
     const lang = document.getElementById("lang").value;
     const t = I18N[lang] || I18N.ja;
     document.getElementById("toggleEdit").textContent = editMode ? t.editOn : t.editOff;
     syncBasicsToUrl();
   });
 
+  document.getElementById("dim").addEventListener("change", applyDim);
+
+  // background load error hint
+  document.getElementById("bg").addEventListener("error", ()=>{
+    alert("背景画像が読み込めませんでした。repoに assets/junior-mat.jpg があるか確認してください。");
+  });
+
   // first draw
   doGen();
-  // set initial edit label
-  document.getElementById("toggleEdit").textContent = I18N[document.getElementById("lang").value].editOff;
 </script>
 </body>
 </html>
