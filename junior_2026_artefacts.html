@@ -68,11 +68,12 @@
       cursor: grab;
     }
     .marker .lbl{
-      background: rgba(255,255,255,.78);
+      background: rgba(255,255,255,.82);
       padding: 2px 7px;
       border-radius: 999px;
       font-size: 12px;
       font-weight: 1000;
+      color:#111; /* ラベル文字は常に黒 */
     }
 
     .panel{
@@ -134,10 +135,8 @@
 <div class="wrap">
   <div class="stage">
     <div class="stageInner" id="stage">
-      <!-- ★ファイル名：assets/2026-GameMat-Junior.jpg -->
       <img class="bg" id="bg" src="./assets/2026-GameMat-Junior.jpg" alt="WRO 2026 Junior game mat" />
 
-      <!-- ★表記を 1,2,3,4 に -->
       <div class="marker" id="m0"><span class="lbl">1</span></div>
       <div class="marker" id="m1"><span class="lbl">2</span></div>
       <div class="marker" id="m2"><span class="lbl">3</span></div>
@@ -199,6 +198,7 @@
     document.getElementById("dimLabel").textContent = t.dim;
   }
 
+  // ---- seeded RNG ----
   function xfnv1a(str){
     let h = 2166136261 >>> 0;
     for (let i=0;i<str.length;i++){
@@ -233,6 +233,7 @@
     return arr;
   }
 
+  // ---- artefacts ----
   const ARTEFACTS = [
     { key:"BLUE",   hex:"#2f6bff" },
     { key:"RED",    hex:"#e43b3b" },
@@ -253,13 +254,13 @@
     return { used, unused };
   }
 
-  // ★ズレ修正：少し下げて、わずかに左右も調整（初期値）
-  // まだ微妙なら、Edit Positions で合わせて Copy Link → pos= を DEFAULT_POS に固定も可能
+  // ---- marker positions (percent-based, editable) ----
+  // 完成版：あなたの pos をベースに「高さを揃えて」「間隔を均等化」した初期値
   const DEFAULT_POS = [
-    { x: 49.4, y: 88.0 }, // 1
-    { x: 55.2, y: 88.0 }, // 2
-    { x: 61.0, y: 88.0 }, // 3
-    { x: 66.8, y: 88.0 }  // 4
+    { x: 46.00, y: 93.75 }, // 1
+    { x: 51.40, y: 93.75 }, // 2
+    { x: 56.80, y: 93.75 }, // 3
+    { x: 62.20, y: 93.75 }  // 4
   ];
 
   function loadPos(){
@@ -359,7 +360,7 @@
     for(let i=0;i<4;i++){
       const el = document.getElementById("m"+i);
       el.style.background = used[i].hex;
-      el.style.color = (used[i].key==="BLACK") ? "#fff" : "#111";
+      el.style.color = "#111"; // ★BLACKでも数字は黒文字（読みやすさ優先）
     }
   }
 
@@ -372,6 +373,7 @@
     setStatus(seed, unused.key);
   }
 
+  // ---- drag edit ----
   function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
 
   function enableDrag(el, idx){
@@ -428,6 +430,7 @@
     syncBasicsToUrl();
   }
 
+  // ---- init ----
   applyFromUrl();
   applyLang(document.getElementById("lang").value);
 
