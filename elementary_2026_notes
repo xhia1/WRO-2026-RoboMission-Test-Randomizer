@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>WRO 2026 Elementary — Notes Randomizer</title>
+  <style>
+    :root{
+      --font: system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans JP",sans-serif;
+    }
+    body{ margin:0; font-family:var(--font); background:#fafafa; color:#111; }
+    header{ background:#fff; border-bottom:1px solid #e5e5e5; }
+    .wrap{ max-width:1160px; margin:0 auto; padding:16px; }
+    header .wrap{ display:flex; flex-wrap:wrap; gap:10px 12px; align-items:center; }
+    h1{ margin:0; font-size:16px; }
+
+    .btn, select, input, label.switch{
+      padding:10px 12px; border-radius:12px; border:1px solid #ccc;
+      background:#fff; font-weight:900;
+    }
+    .btn{ cursor:pointer; }
+    .btn:hover{ background:#f2f2f2; }
+    input{ font-weight:800; }
+    .bar{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .tiny{ font-size:12px; color:#444; font-weight:700; }
+
+    label.switch{ display:flex; gap:8px; align-items:center; cursor:pointer; user-select:none; }
+    label.switch input{ width:auto; padding:0; border:none; }
+
+    /* Stage */
+    .stage{
+      position: relative;
+      margin-top: 14px;
+      background:#fff;
+      border: 2px solid #000;
+      border-radius: 14px;
+      overflow:hidden;
+    }
+
+    /* 背景画像 2048×1000（同系統）想定 */
+    .stageInner{
+      position: relative;
+      width: 100%;
+      aspect-ratio: 2048 / 1000;
+      background:#fff;
+    }
+
+    .bg{
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      object-fit: contain;
+      background:#fff;
+      display:block;
+    }
+
+    /* Overlay markers */
+    .marker{
+      position:absolute;
+      width: 44px; height: 44px;
+      border-radius: 10px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.18);
+      display:flex; align-items:center; justify-content:center;
+      font-weight: 1000;
+      color:#111;
+      user-select:none;
+      touch-action:none;
+    }
+    .marker[data-edit="1"]{
+      outline: 3px dashed rgba(0,0,0,.35);
+      cursor: grab;
+    }
+    .marker .lbl{
+      background: rgba(255,255,255,.82);
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 1000;
+      color:#111; /* 文字は常に黒 */
+    }
+
+    .panel{
+      margin-top:10px;
+      background:#fff;
+      border:1px solid #ddd;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,.04);
+    }
+    .note{ font-size:12px; color:#333; line-height:1.6; margin:0; }
+    .legend{
+      display:flex; gap:8px; flex-wrap:wrap; margin-top:8px;
+      align-items:center;
+    }
+    .chip{
+      display:flex; gap:6px; align-items:center;
+      padding:6px 10px; border:1px solid #ddd; border-radius:999px;
+      font-weight:900; font-size:12px; background:#fff;
+    }
+    .dot{ width:14px; height:14px; border-radius:4px; border:1px solid rgba(0,0,0,.15); }
+
+    .dim .bg{ filter: brightness(0.92) contrast(1.05); }
+
+    @media (max-width:520px){
+      .marker{ width:40px; height:40px; }
+      .marker .lbl{ font-size:11px; }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1 id="title">RoboMission 2026 Elementary — Notes Randomizer</h1>
+    <div class="bar">
+      <select id="lang" aria-label="language">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+      </select>
+
+      <input id="seed" type="text" placeholder="Seed (例: R1)" aria-label="seed" />
+
+      <button class="btn" id="gen">New arrangement</button>
+      <button class="btn" id="copylink">Copy Link</button>
+      <button class="btn" id="toggleEdit">Edit Positions</button>
+
+      <label class="switch" title="Dim background for readability">
+        <input id="dim" type="checkbox" />
+        <span id="dimLabel">背景を少し暗く</span>
+      </label>
+
+      <button class="btn" onclick="location.href='./index.html'">Back</button>
+
+      <span class="tiny" id="status"></span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stage">
+    <div class="stageInner" id="stage">
+      <!-- ★背景画像 -->
+      <img class="bg" id="bg" src="./assets/2026-GameMat-Elementary.jpg" alt="WRO 2026 Elementary game mat" />
+
+      <!-- 4つの配置マーカー（上部の4マス想定） -->
+      <div class="marker" id="m0"><span class="lbl">1</span></div>
+      <div class="marker" id="m1"><span class="lbl">2</span></div>
+      <div class="marker" id="m2"><span class="lbl">3</span></div>
+      <div class="marker" id="m3"><span class="lbl">4</span></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="note" id="note">
+      4色（青/黄/黒/白）をランダム順で4マスへ配置します。赤・緑は固定（ランダム対象外）として表示します。
+    </p>
+    <div class="legend" id="legend"></div>
+    <div class="legend" id="fixed"></div>
+  </div>
+</div>
+
+<script>
+  const LABELS = ["1","2","3","4"];
+
+  // ---- i18n ----
+  const I18N = {
+    ja: {
+      title: "RoboMission 2026 Elementary — Notes Randomizer",
+      seedPh: "Seed (例: R1)",
+      gen: "新しい配置",
+      copy: "Copy Link",
+      editOn: "位置編集: ON",
+      editOff: "Edit Positions",
+      note:
+        "4色（青/黄/黒/白）をランダム順で4マスへ配置します。赤・緑は固定（ランダム対象外）として表示します。",
+      status: (seed)=>`seed: ${seed || "random"}`,
+      used: "配置（4つ）",
+      fixed: "固定（ランダム対象外）",
+      dim: "背景を少し暗く"
+    },
+    en: {
+      title: "RoboMission 2026 Elementary — Notes Randomizer",
+      seedPh: "Seed (e.g., R1)",
+      gen: "New arrangement",
+      copy: "Copy Link",
+      editOn: "Edit Positions: ON",
+      editOff: "Edit Positions",
+      note:
+        "Randomly assigns 4 colours (blue/yellow/black/white) to the four squares. Red and green are fixed (not randomized).",
+      status: (seed)=>`seed: ${seed || "random"}`,
+      used: "Assigned (4)",
+      fixed: "Fixed (not randomized)",
+      dim: "Dim background"
+    }
+  };
+
+  function applyLang(lang){
+    const t = I18N[lang] || I18N.ja;
+    document.documentElement.lang = lang;
+    document.getElementById("title").textContent = t.title;
+    document.getElementById("seed").placeholder = t.seedPh;
+    document.getElementById("gen").textContent = t.gen;
+    document.getElementById("copylink").textContent = t.copy;
+    document.getElementById("note").textContent = t.note;
+    document.getElementById("dimLabel").textContent = t.dim;
+  }
+
+  // ---- seeded RNG ----
+  function xfnv1a(str){
+    let h = 2166136261 >>> 0;
+    for (let i=0;i<str.length;i++){
+      h ^= str.charCodeAt(i);
+      h = Math.imul(h, 16777619);
+    }
+    return () => {
+      h += h<<13; h ^= h>>>7;
+      h += h<<3;  h ^= h>>>17;
+      h += h<<5;
+      return h>>>0;
+    };
+  }
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t>>>15), t | 1);
+      t ^= t + Math.imul(t ^ (t>>>7), t | 61);
+      return ((t ^ (t>>>14))>>>0) / 4294967296;
+    }
+  }
+  function makeRng(seedStr){
+    if(!seedStr) return Math.random;
+    const seed = xfnv1a(seedStr)();
+    return mulberry32(seed);
+  }
+  function shuffle(arr, rng){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(rng()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  // ---- Elementary notes ----
+  // ランダム対象：BLUE / YELLOW / BLACK / WHITE（4つ固定・順番だけランダム）
+  const NOTES = [
+    { key:"BLUE",   hex:"#2f6bff" },
+    { key:"YELLOW", hex:"#ffd400" },
+    { key:"BLACK",  hex:"#222222" },
+    { key:"WHITE",  hex:"#ffffff" }
+  ];
+
+  // 固定（ランダム対象外）
+  const FIXED = [
+    { key:"RED",   hex:"#e43b3b" },
+    { key:"GREEN", hex:"#21b35b" }
+  ];
+
+  function generate(seedStr){
+    const rng = makeRng(seedStr);
+    const used = shuffle(NOTES.slice(), rng);
+    return { used };
+  }
+
+  // ---- marker positions (percent-based, editable) ----
+  // 初期値：上部の4マスに“だいたい”合う想定。ズレたら Edit Positions → Copy Link 推奨
+  // ※あなたの画像の見え方（contain + 画面幅）で微妙に変わるため、初回調整運用が確実です。
+  const DEFAULT_POS = [
+    { x: 43.0, y: 12.5 }, // 1
+    { x: 50.0, y: 12.5 }, // 2
+    { x: 57.0, y: 12.5 }, // 3
+    { x: 64.0, y: 12.5 }  // 4
+  ];
+
+  function loadPos(){
+    const url = new URL(location.href);
+    const p = url.searchParams.get("pos");
+    if(!p) return null;
+    try{
+      const arr = JSON.parse(decodeURIComponent(p));
+      if(Array.isArray(arr) && arr.length===4) return arr;
+    }catch{}
+    return null;
+  }
+
+  function savePosToUrl(pos){
+    const url = new URL(location.href);
+    url.searchParams.set("pos", encodeURIComponent(JSON.stringify(pos)));
+    history.replaceState(null, "", url.toString());
+  }
+
+  function syncBasicsToUrl(){
+    const url = new URL(location.href);
+    const seed = document.getElementById("seed").value.trim();
+    const lang = document.getElementById("lang").value;
+    const dim  = document.getElementById("dim").checked;
+
+    if(seed) url.searchParams.set("seed", seed); else url.searchParams.delete("seed");
+    url.searchParams.set("lang", lang);
+    if(dim) url.searchParams.set("dim","1"); else url.searchParams.delete("dim");
+
+    history.replaceState(null, "", url.toString());
+  }
+
+  function applyFromUrl(){
+    const url = new URL(location.href);
+    const seed = url.searchParams.get("seed");
+    const lang = url.searchParams.get("lang");
+    const dim  = url.searchParams.get("dim");
+
+    if(seed) document.getElementById("seed").value = seed;
+    if(lang==="ja"||lang==="en") document.getElementById("lang").value = lang;
+    document.getElementById("dim").checked = (dim==="1");
+  }
+
+  let positions = loadPos() || DEFAULT_POS.map(p=>({x:p.x,y:p.y}));
+  let editMode = false;
+
+  function placeMarkers(){
+    for(let i=0;i<4;i++){
+      const el = document.getElementById("m"+i);
+      el.style.left = positions[i].x + "%";
+      el.style.top  = positions[i].y + "%";
+      el.style.transform = "translate(-50%, -50%)";
+      el.dataset.edit = editMode ? "1" : "0";
+    }
+  }
+
+  function setStatus(seed){
+    const lang = document.getElementById("lang").value;
+    const t = I18N[lang] || I18N.ja;
+    document.getElementById("status").textContent = t.status(seed);
+  }
+
+  function renderLegend(used){
+    const lang = document.getElementById("lang").value;
+    const t = I18N[lang] || I18N.ja;
+
+    const legend = document.getElementById("legend");
+    const fixed = document.getElementById("fixed");
+    legend.innerHTML = "";
+    fixed.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "chip";
+    head.textContent = t.used;
+    legend.appendChild(head);
+
+    used.forEach((c, idx)=>{
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML =
+        `<span class="dot" style="background:${c.hex}"></span> ${LABELS[idx]}: ${c.key}`;
+      legend.appendChild(chip);
+    });
+
+    const head2 = document.createElement("div");
+    head2.className = "chip";
+    head2.textContent = t.fixed;
+    fixed.appendChild(head2);
+
+    FIXED.forEach((c)=>{
+      const chip = document.createElement("div");
+      chip.className = "chip";
+      chip.innerHTML = `<span class="dot" style="background:${c.hex}"></span> ${c.key}`;
+      fixed.appendChild(chip);
+    });
+  }
+
+  function applyColours(used){
+    for(let i=0;i<4;i++){
+      const el = document.getElementById("m"+i);
+      el.style.background = used[i].hex;
+      el.style.color = "#111"; // ★黒でも数字は黒文字（ラベル背景が白なので読みやすい）
+    }
+  }
+
+  function doGen(){
+    const seed = document.getElementById("seed").value.trim();
+    const { used } = generate(seed);
+    applyColours(used);
+    renderLegend(used);
+    syncBasicsToUrl();
+    setStatus(seed);
+  }
+
+  // ---- drag edit ----
+  function clamp(n,min,max){ return Math.max(min, Math.min(max,n)); }
+
+  function enableDrag(el, idx){
+    let dragging = false;
+
+    function pointerDown(e){
+      if(!editMode) return;
+      dragging = true;
+      el.setPointerCapture(e.pointerId);
+      el.style.cursor = "grabbing";
+    }
+    function pointerMove(e){
+      if(!dragging || !editMode) return;
+      const stage = document.getElementById("stage");
+      const r = stage.getBoundingClientRect();
+      const x = ((e.clientX - r.left) / r.width) * 100;
+      const y = ((e.clientY - r.top) / r.height) * 100;
+      positions[idx].x = clamp(x, 0, 100);
+      positions[idx].y = clamp(y, 0, 100);
+      placeMarkers();
+      savePosToUrl(positions);
+    }
+    function pointerUp(){
+      if(!dragging) return;
+      dragging = false;
+      el.style.cursor = "grab";
+    }
+
+    el.addEventListener("pointerdown", pointerDown);
+    window.addEventListener("pointermove", pointerMove);
+    window.addEventListener("pointerup", pointerUp);
+  }
+
+  async function copyLink(){
+    try{
+      syncBasicsToUrl();
+      await navigator.clipboard.writeText(location.href);
+      alert("リンクをコピーしました / Link copied");
+    }catch{
+      alert("コピーできませんでした（ブラウザ権限を確認）");
+    }
+  }
+
+  function toggleEdit(){
+    editMode = !editMode;
+    const lang = document.getElementById("lang").value;
+    const t = I18N[lang] || I18N.ja;
+    document.getElementById("toggleEdit").textContent = editMode ? t.editOn : t.editOff;
+    placeMarkers();
+  }
+
+  function applyDim(){
+    document.getElementById("stage").classList.toggle("dim", document.getElementById("dim").checked);
+    syncBasicsToUrl();
+  }
+
+  // ---- init ----
+  applyFromUrl();
+  applyLang(document.getElementById("lang").value);
+
+  document.getElementById("toggleEdit").textContent =
+    I18N[document.getElementById("lang").value].editOff;
+
+  placeMarkers();
+  applyDim();
+
+  for(let i=0;i<4;i++){
+    enableDrag(document.getElementById("m"+i), i);
+  }
+
+  document.getElementById("gen").addEventListener("click", doGen);
+  document.getElementById("copylink").addEventListener("click", copyLink);
+  document.getElementById("toggleEdit").addEventListener("click", toggleEdit);
+
+  document.getElementById("lang").addEventListener("change", ()=>{
+    applyLang(document.getElementById("lang").value);
+    const lang = document.getElementById("lang").value;
+    const t = I18N[lang] || I18N.ja;
+    document.getElementById("toggleEdit").textContent = editMode ? t.editOn : t.editOff;
+    syncBasicsToUrl();
+  });
+
+  document.getElementById("dim").addEventListener("change", applyDim);
+
+  document.getElementById("bg").addEventListener("error", ()=>{
+    alert("背景画像が読み込めませんでした。repoに assets/2026-GameMat-Elementary.jpg があるか確認してください。");
+  });
+
+  doGen();
+</script>
+</body>
+</html>
